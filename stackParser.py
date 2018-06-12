@@ -68,21 +68,20 @@ def parse(URL):
         mainAnswer = {}
         quotesInfo = {}
         mainAnswer['user_id'] = userList1[user]
-        mainAnswer['message'] = message[ctr]
+        mainAnswer['message'] = 'ignore "Quote from.." to "hh:mm:ss" message. ' + message[ctr].replace(quotes[ctr],'')
         # dictionary for quotes if the user has
         mainAnswer['quotes'] = quotesInfo
         quotesInfo['user_id'] = quotesUserID[ctr]
         quotesInfo['message'] = quotes[ctr]
         # timestamp UNIX
         mainAnswer['date_posted'] = finalDate[ctr]
-        finalOuput.append(mainAnswer)
         ctr += 1
         finalOuput.append(mainAnswer)
         if user < len(userList1)-1:
             mainAnswer = {}
             quotesInfo = {}
             mainAnswer['user_id'] = userList2[user]
-            mainAnswer['message'] = message[ctr]
+            mainAnswer['message'] = 'ignore "Quote from.." to "hh:mm:ss" message. ' + message[ctr].replace(quotes[ctr],'')
             # dictionary for quotes if the user has
             mainAnswer['quotes'] = quotesInfo
             quotesInfo['user_id'] = quotesUserID[ctr]
