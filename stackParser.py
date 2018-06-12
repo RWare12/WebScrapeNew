@@ -1,66 +1,96 @@
 from bs4 import BeautifulSoup
 import urllib.request as req
+import time
+import datetime
+import re
 
 userList1 = [] #getting username from `windowbg` tag
 userList2 = [] #getting username from `windowbg2` tag
 message = [] #getting the post from users
 quotes = [] #getting quotes from user if there is
 quotesUserID = [] #user for being quoted
-dataAndtime = [] #date and time of post
+dateAndtime = [] #date and time of post
 finalOuput = [] #will represent JSON of data scraped
+months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
-page = req.urlopen('http://forums.abs-cbn.com/bagani-(march-5-2018-present)/alamat/')
-soup = BeautifulSoup(page, 'html.parser') # from url
+def parse(URL):
 
+    page = req.urlopen(URL)
+    soup = BeautifulSoup(page, 'html.parser') # from url
 
-for post in soup.find_all('div',{'class':'windowbg'}):
-    userList1.append(post.a.text)
+    #getting user id
+    for post in soup.find_all('div',{'class':'windowbg'}):
+        userList1.append(post.a.text)
 
-for post in soup.find_all('div',{'class':'windowbg2'}):
-    userList2.append(post.a.text)
+    #getting user id
+    for post in soup.find_all('div',{'class':'windowbg2'}):
+        userList2.append(post.a.text)
 
-for post in soup.find_all('div',{'class':'post'}):
-    message.append(post.text.strip())
+    #getting post message
+    for post in soup.find_all('div',{'class':'post'}):
+        tempMessage = post.text.strip()
+        message.append(tempMessage.replace('\xa0',''))
 
-for post in soup.find_all('div',{'class':'post'}):
-    if post.blockquote is not None:
-        quotes.append(post.blockquote.text.strip())
-        quotesUserID.append(post.a.text)
-    else:
-        quotes.append("None")
-        quotesUserID.append("None")
+    #getting quotes
+    for post in soup.find_all('div',{'class':'post'}):
+        if post.blockquote is not None:
+            tempQuote = post.blockquote.text.strip()
+            quotes.append(tempQuote.replace('\xa0',''))
+            if post.a is not None:
+                tempQuoteUserID = post.a.text.strip().replace('Quote from: ','').split(' ')
+                quotesUserID.append(tempQuoteUserID[0])
+            else:
+                quotesUserID.append("None")
+        else:
+            quotes.append("None")
+            quotesUserID.append("None")
 
-for post in soup.find_all('div',{'class':'smalltext'}):
-    dataAndtime.append(post.text.strip())
+    #getting the date
+    for post in soup.find_all('div',{'class':'keyinfo'}):
+        dateAndtime.append(post.text.strip().replace("\n",""))
 
+    finalDate = []
 
+    for nDate in range(len(dateAndtime)):
+        for m in range(len(months)):
+            regex = months[m] + " \d{1,2}, \d{4}"
+            pattern = re.compile(regex)
+            matches = pattern.finditer(dateAndtime[nDate])
+            for match in matches:
+                toString = match.group().replace('January','01').replace('February','02').replace('March','03').replace('April','04').replace('May','05').replace('June','06').replace('July','07').replace('August','08').replace('September','09').replace('October','10').replace('November','11').replace('December','12')
+                tempUnixTimeStamp = toString.replace(' ','/').replace(',','')
+                toUnixTimeStamp = time.mktime(datetime.datetime.strptime(tempUnixTimeStamp, "%m/%d/%Y").timetuple())
+                finalDate.append(toUnixTimeStamp)
 
-print(len(message))
+    ctr = 0 #counter for messages to the post
 
-ctr = 0 #counter for messages to the post
-
-for user in range(len(userList1)):
-    mainAnswer = {}
-    quotesInfo = {}
-    mainAnswer['user_id'] = userList1[user]
-    # mainAnswer['message'] = message[ctr]
-    mainAnswer['quotes'] = quotesInfo
-    quotesInfo['user_id'] = quotesUserID[ctr]
-    ctr += 1
-    finalOuput.append(mainAnswer)
-    if user < len(userList1)-1:
+    for user in range(len(userList1)):
         mainAnswer = {}
-        mainAnswer['user_id'] = userList2[user]
-        # mainAnswer['message'] = message[ctr]
+        quotesInfo = {}
+        mainAnswer['user_id'] = userList1[user]
+        mainAnswer['message'] = message[ctr]
+        # dictionary for quotes if the user has
         mainAnswer['quotes'] = quotesInfo
         quotesInfo['user_id'] = quotesUserID[ctr]
+        quotesInfo['message'] = quotes[ctr]
+        # timestamp UNIX
+        mainAnswer['date_posted'] = finalDate[ctr]
+        finalOuput.append(mainAnswer)
         ctr += 1
         finalOuput.append(mainAnswer)
+        if user < len(userList1)-1:
+            mainAnswer = {}
+            quotesInfo = {}
+            mainAnswer['user_id'] = userList2[user]
+            mainAnswer['message'] = message[ctr]
+            # dictionary for quotes if the user has
+            mainAnswer['quotes'] = quotesInfo
+            quotesInfo['user_id'] = quotesUserID[ctr]
+            quotesInfo['message'] = quotes[ctr]
+            # timestamp UNIX
+            mainAnswer['date_posted'] = finalDate[ctr]
+            ctr += 1
+            finalOuput.append(mainAnswer)
 
+    return finalOuput
 
-
-# print("quotes: ",quotes)
-# print("quotesUserID: ",quotesUserID)
-# print("dateAndtime: ",dataAndtime)
-
-print(finalOuput) #final
